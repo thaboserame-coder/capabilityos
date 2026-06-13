@@ -1,0 +1,8 @@
+dist
+coverage
+storybook-static
+node_modules
+cypress/videos
+cypress/screenshots
+cypress/downloads
+package-lock.json

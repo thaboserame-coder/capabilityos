@@ -1,0 +1,65 @@
+name: E2E & Visual Regression
+
+# Cypress E2E suite (auth, learning journey, facilitator flows) plus
+# cypress-axe WCAG 2.1 AA checks, run against the production build via
+# `vite preview`. When a PERCY_TOKEN secret is configured, the same run is
+# repeated with Percy snapshots for visual regression review.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  cypress:
+    name: Cypress E2E + accessibility (axe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Run Cypress against production preview
+        run: npm run e2e
+
+      - name: Upload Cypress screenshots (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 14
+
+  percy:
+    name: Percy visual regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run Cypress with Percy snapshots
+        env:
+          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+        run: |
+          if [ -z "$PERCY_TOKEN" ]; then
+            echo "::warning::PERCY_TOKEN is not set — skipping visual regression run. See docs/RUNBOOK.md."
+            exit 0
+          fi
+          npm run e2e:percy

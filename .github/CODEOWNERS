@@ -1,0 +1,21 @@
+# Code owners for CapabilityOS.
+#
+# Combined with a branch protection rule on `main` that requires 2 approving
+# reviews (Settings > Branches > Branch protection rules > Require a pull
+# request before merging > Require approvals = 2, Require review from Code
+# Owners), this ensures every change gets sign-off from someone accountable
+# for the affected area.
+#
+# Replace the placeholder handles below with real GitHub usernames or teams
+# before enabling the branch protection rule — see
+# docs/DEPLOYMENT_CHECKLIST.md.
+
+* @digilytics/capabilityos-maintainers
+
+# CI/CD, deployment and security configuration
+/.github/ @digilytics/capabilityos-maintainers
+/vercel.json @digilytics/capabilityos-maintainers
+/lighthouserc.json @digilytics/capabilityos-maintainers
+
+# Data and content (industry copy, tier/module definitions, quiz fallback)
+/src/data/ @digilytics/capabilityos-content

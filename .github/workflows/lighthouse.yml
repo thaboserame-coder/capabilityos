@@ -1,0 +1,33 @@
+name: Lighthouse CI
+
+# Enforces performance, accessibility, best-practices and SEO scores >= 90
+# (see lighthouserc.json) against the production build's entry screen.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: lighthouse-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Lighthouse budgets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Build app
+        run: npm run build
+      - name: Run Lighthouse CI
+        run: npx @lhci/cli@0.14.x autorun

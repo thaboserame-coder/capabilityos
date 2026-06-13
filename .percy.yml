@@ -1,0 +1,20 @@
+# Percy visual regression configuration.
+# Snapshots are captured via `cy.percySnapshot()` in cypress/e2e/*.cy.js,
+# run with `npm run e2e:percy` (requires PERCY_TOKEN — see docs/RUNBOOK.md).
+version: 2
+snapshot:
+  widths:
+    - 1280 # desktop (matches cypress.config.js viewportWidth)
+    - 768 # tablet
+  min-height: 1024
+  percy-css: |
+    /* Freeze animations so visual diffs aren't noise from CSS transitions. */
+    *, *::before, *::after {
+      animation-duration: 0s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+    }
+discovery:
+  allowed-hostnames:
+    - localhost

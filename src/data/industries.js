@@ -1,0 +1,38 @@
+/**
+ * Full list of industries a learner can select at sign-up. Selecting an
+ * industry personalises AI-generated quiz questions to that sector.
+ * @type {string[]}
+ */
+export const INDUSTRIES = [
+  "Financial Services",
+  "Mining & Resources",
+  "Healthcare & Life Sciences",
+  "Retail & Consumer Goods",
+  "Manufacturing & Engineering",
+  "Telecommunications",
+  "Energy & Utilities",
+  "Government & Public Sector",
+  "Technology & Software",
+  "Professional Services",
+  "Agriculture",
+  "Property & Real Estate",
+];
+
+/**
+ * Short labels used where horizontal space is constrained (nav bar, badges).
+ * @type {Record<string, string>}
+ */
+export const INDUSTRY_SHORT_LABELS = {
+  "Financial Services": "Fin. Services",
+  "Mining & Resources": "Mining",
+  "Healthcare & Life Sciences": "Healthcare",
+  "Retail & Consumer Goods": "Retail",
+  "Manufacturing & Engineering": "Manufacturing",
+  Telecommunications: "Telecoms",
+  "Energy & Utilities": "Energy",
+  "Government & Public Sector": "Government",
+  "Technology & Software": "Technology",
+  "Professional Services": "Prof. Services",
+  Agriculture: "Agriculture",
+  "Property & Real Estate": "Property",
+};
