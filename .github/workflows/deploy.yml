@@ -42,7 +42,7 @@ jobs:
             echo "::warning::Vercel secrets are not configured — skipping deploy. See docs/DEPLOYMENT_CHECKLIST.md."
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: steps.secrets.outputs.configured == 'true'
         with:
           node-version: "20"
