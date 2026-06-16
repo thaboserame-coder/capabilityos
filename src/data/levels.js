@@ -1,44 +1,34 @@
-// Level progression — Digilytics Co CapabilityOS gamification layer.
-// Levels provide a finer-grained sense of momentum than tiers and
-// drive the progress indicators on the learner dashboard.
+// Level progression — CapabilityOS
+// 8 levels matching the original EDAAI Workforce Architecture
 
-export const LEVELS = Array.from({ length: 20 }, (_, i) => {
-  const level = i + 1;
-  // Each level requires progressively more XP (gentle curve).
-  const xpRequired = Math.round(100 * level + 25 * level * (level - 1));
-  return {
-    level,
-    xpRequired,
-    title: levelTitle(level),
-  };
-});
-
-function levelTitle(level) {
-  if (level <= 3) return "Foundations";
-  if (level <= 7) return "Builder";
-  if (level <= 12) return "Operator";
-  if (level <= 17) return "Strategist";
-  return "Authority";
-}
+export const LEVELS = [
+  { n: 1, name: "Digital Literate",       min: 0,     color: "#6B8EAD" },
+  { n: 2, name: "Data Aware",             min: 300,   color: "#4AA8D4" },
+  { n: 3, name: "Analytics Literate",     min: 700,   color: "#0072C6" },
+  { n: 4, name: "AI Literate",            min: 1400,  color: "#00D4E8" },
+  { n: 5, name: "AI Productive",          min: 2500,  color: "#1D9E75" },
+  { n: 6, name: "AI Practitioner",        min: 4000,  color: "#C17F24" },
+  { n: 7, name: "AI Leader",              min: 6500,  color: "#7C3AED" },
+  { n: 8, name: "Transformation Leader",  min: 10000, color: "#E8B84B" },
+];
 
 export function getLevelForXP(xp) {
-  let current = LEVELS[0];
-  for (const entry of LEVELS) {
-    if (xp >= entry.xpRequired) current = entry;
-    else break;
+  let level = LEVELS[0];
+  for (const l of LEVELS) {
+    if (xp >= l.min) level = l;
   }
-  return current;
+  return level;
 }
 
 export function getNextLevel(xp) {
-  return LEVELS.find((entry) => entry.xpRequired > xp) || null;
+  const idx = LEVELS.findIndex((l) => l.min > xp);
+  return idx === -1 ? null : LEVELS[idx];
 }
 
 export function getLevelProgress(xp) {
   const current = getLevelForXP(xp);
   const next = getNextLevel(xp);
-  if (!next) return 1;
-  const span = next.xpRequired - current.xpRequired;
-  const into = xp - current.xpRequired;
-  return span > 0 ? Math.min(1, Math.max(0, into / span)) : 1;
+  if (!next) return { current, next: null, pct: 100 };
+  const pct = Math.round(((xp - current.min) / (next.min - current.min)) * 100);
+  return { current, next, pct };
 }

@@ -1,82 +1,176 @@
 import React from "react";
 import { COLORS, TYPE_SCALE, SHADOW, RADIUS } from "../theme/tokens.js";
 import { useAppStore } from "../store/AppStore.jsx";
-import { INDUSTRIES } from "../data/industries.js";
-import { getModulesForIndustry } from "../data/modules.js";
-import { getTierForXP } from "../data/tiers.js";
+import { getLevelForXP } from "../data/levels.js";
 
-// Reports & Exco — the admin "command centre" view.
-// Per design principles: admin surfaces may feel firmer/more structured
-// than the learner portal. A single dark header band signals "command
-// centre" while the report body stays light, calm, and boardroom-ready.
 export default function ReportsExco() {
-  const { learner } = useAppStore();
-  const tier = getTierForXP(learner.xp);
+  const { auth, xp, accessibleTiers, isModuleDone } = useAppStore();
+  const level = getLevelForXP(xp);
 
-  const rows = INDUSTRIES.map((industry) => {
-    const modules = getModulesForIndustry(industry.id);
-    const completed = modules.filter((m) => learner.completedModuleIds.includes(m.id));
-    const readiness = modules.length ? completed.length / modules.length : 0;
-    return { industry, total: modules.length, completed: completed.length, readiness };
+  // Build per-tier stats
+  const tierRows = accessibleTiers.map((tier) => {
+    const done = tier.mods.filter((m) => isModuleDone(tier.id, m.id)).length;
+    const total = tier.mods.length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return { tier, done, total, pct };
   });
+
+  const totalDone = tierRows.reduce((s, r) => s + r.done, 0);
+  const totalMods = tierRows.reduce((s, r) => s + r.total, 0);
+  const overallPct = totalMods ? Math.round((totalDone / totalMods) * 100) : 0;
 
   return (
     <div>
-      {/* Command-centre header band */}
-      <div
-        style={{
-          background: COLORS.text,
-          color: "#FFFFFF",
-          padding: "32px 48px",
-        }}
-      >
+      {/* Command-centre header */}
+      <div style={{ background: COLORS.text, color: "#FFFFFF", padding: "32px 48px" }}>
         <div style={{ ...TYPE_SCALE.caption, color: COLORS.accSoft, textTransform: "uppercase" }}>
           Reports &amp; Exco
         </div>
         <h1 style={{ ...TYPE_SCALE.pageTitle, color: "#FFFFFF", marginTop: 6 }}>
           Capability Readiness Overview
         </h1>
-        <p style={{ ...TYPE_SCALE.body, color: "rgba(255,255,255,0.7)", marginTop: 8, maxWidth: 620 }}>
-          A consolidated view of capability development across industries, for governance
-          and executive review.
+        <p style={{ ...TYPE_SCALE.body, color: "rgba(255,255,255,0.65)", marginTop: 8, maxWidth: 600 }}>
+          A consolidated view of AI capability development across learning tiers, for governance and executive review.
         </p>
-
-        <div style={{ display: "flex", gap: 32, marginTop: 28 }}>
-          <HeaderStat label="Learner" value={learner.name} />
-          <HeaderStat label="Current tier" value={tier.name} />
-          <HeaderStat label="Total XP" value={learner.xp.toLocaleString()} />
-          <HeaderStat label="Industries tracked" value={String(INDUSTRIES.length)} />
+        <div style={{ display: "flex", gap: 32, marginTop: 28, flexWrap: "wrap" }}>
+          <HeaderStat label="Participant" value={auth?.name || "—"} />
+          <HeaderStat label="Role" value={auth?.role || "—"} />
+          <HeaderStat label="Level" value={level.name} />
+          <HeaderStat label="Total XP" value={xp.toLocaleString()} />
+          <HeaderStat label="Overall readiness" value={`${overallPct}%`} />
         </div>
       </div>
 
-      {/* Report body — light, calm, boardroom-ready */}
-      <div style={{ padding: "40px 48px", maxWidth: 1100 }}>
-        <h2 style={{ ...TYPE_SCALE.sectionTitle, marginBottom: 16 }}>
-          Readiness by industry
-        </h2>
-
+      {/* Report body */}
+      <div style={{ padding: "40px 48px", maxWidth: 1000 }}>
+        {/* Overall progress */}
         <div
           style={{
-            background: COLORS.surf,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.md,
-            boxShadow: SHADOW.sm,
-            overflow: "hidden",
+            background: COLORS.surf, border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.md, boxShadow: SHADOW.sm,
+            padding: 24, marginBottom: 32,
+            display: "flex", alignItems: "center", gap: 28,
           }}
         >
-          <ReportHeaderRow />
-          {rows.map((row, i) => (
-            <ReportRow key={row.industry.id} row={row} isLast={i === rows.length - 1} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 40, fontWeight: 800, color: COLORS.acc }}>{overallPct}%</div>
+            <div style={{ ...TYPE_SCALE.caption, color: COLORS.muted2 }}>Overall</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ ...TYPE_SCALE.cardTitle, marginBottom: 8 }}>Programme completion</div>
+            <div style={{ height: 10, borderRadius: 999, background: COLORS.border, overflow: "hidden" }}>
+              <div
+                style={{
+                  height: "100%", borderRadius: 999,
+                  width: `${overallPct}%`,
+                  background: overallPct >= 80 ? COLORS.green : COLORS.acc,
+                  transition: "width .6s",
+                }}
+              />
+            </div>
+            <div style={{ ...TYPE_SCALE.caption, color: COLORS.muted2, marginTop: 6 }}>
+              {totalDone} of {totalMods} modules completed across {tierRows.length} tiers
+            </div>
+          </div>
+        </div>
+
+        {/* Tier breakdown table */}
+        <h2 style={{ ...TYPE_SCALE.sectionTitle, marginBottom: 14 }}>Readiness by tier</h2>
+        <div
+          style={{
+            background: COLORS.surf, border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.md, boxShadow: SHADOW.sm, overflow: "hidden",
+          }}
+        >
+          {/* Table header */}
+          <div
+            style={{
+              display: "flex", padding: "10px 20px",
+              background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}`,
+              ...TYPE_SCALE.caption, color: COLORS.muted2, textTransform: "uppercase",
+            }}
+          >
+            <div style={{ flex: 3 }}>Tier</div>
+            <div style={{ flex: 1, textAlign: "center" }}>Modules</div>
+            <div style={{ flex: 1, textAlign: "center" }}>Completed</div>
+            <div style={{ flex: 2, textAlign: "right" }}>Readiness</div>
+          </div>
+
+          {tierRows.length === 0 && (
+            <div style={{ padding: "24px 20px", ...TYPE_SCALE.body, color: COLORS.muted }}>
+              No tiers available for your role.
+            </div>
+          )}
+
+          {tierRows.map((row, i) => (
+            <div
+              key={row.tier.id}
+              style={{
+                display: "flex", alignItems: "center",
+                padding: "16px 20px",
+                borderBottom: i < tierRows.length - 1 ? `1px solid ${COLORS.border}` : "none",
+              }}
+            >
+              <div style={{ flex: 3, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>{row.tier.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: COLORS.text }}>{row.tier.name}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted2 }}>{row.tier.audience}</div>
+                </div>
+              </div>
+              <div style={{ flex: 1, textAlign: "center", ...TYPE_SCALE.body, color: COLORS.muted }}>
+                {row.total}
+              </div>
+              <div style={{ flex: 1, textAlign: "center", fontWeight: 700, color: COLORS.text }}>
+                {row.done}
+              </div>
+              <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
+                <div style={{ width: 120, height: 6, borderRadius: 999, background: COLORS.border, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%", borderRadius: 999,
+                      width: `${row.pct}%`,
+                      background: row.pct >= 100 ? COLORS.green : row.tier.color,
+                    }}
+                  />
+                </div>
+                <span style={{ ...TYPE_SCALE.caption, color: COLORS.muted2, width: 36, textAlign: "right" }}>
+                  {row.pct}%
+                </span>
+              </div>
+            </div>
           ))}
         </div>
 
-        <h2 style={{ ...TYPE_SCALE.sectionTitle, marginTop: 40, marginBottom: 16 }}>
-          Capability detail — {rows[0]?.industry.name}
-        </h2>
-        <CapabilityBreakdown
-          industry={INDUSTRIES[0]}
-          completedModuleIds={learner.completedModuleIds}
-        />
+        {/* Per-tier module detail */}
+        {tierRows.map((row) => (
+          <div key={row.tier.id} style={{ marginTop: 36 }}>
+            <h2 style={{ ...TYPE_SCALE.sectionTitle, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+              <span>{row.tier.icon}</span> {row.tier.name} — Module Detail
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+              {row.tier.mods.map((mod) => {
+                const done = isModuleDone(row.tier.id, mod.id);
+                return (
+                  <div
+                    key={mod.id}
+                    style={{
+                      background: done ? COLORS.green + "08" : COLORS.surf,
+                      border: `1px solid ${done ? COLORS.green + "40" : COLORS.border}`,
+                      borderRadius: RADIUS.sm, padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontSize: 18, marginBottom: 4 }}>{done ? "✓" : "○"}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.text, lineHeight: 1.3 }}>{mod.title}</div>
+                    <div style={{ fontSize: 11, color: COLORS.muted2, marginTop: 4 }}>
+                      {done ? "Complete" : mod.dur}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -85,122 +179,12 @@ export default function ReportsExco() {
 function HeaderStat({ label, value }) {
   return (
     <div>
-      <div style={{ ...TYPE_SCALE.caption, color: "rgba(255,255,255,0.55)", textTransform: "uppercase" }}>
+      <div style={{ ...TYPE_SCALE.caption, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
         {label}
       </div>
-      <div style={{ ...TYPE_SCALE.cardTitle, color: "#FFFFFF", fontSize: 17, marginTop: 4 }}>
+      <div style={{ ...TYPE_SCALE.cardTitle, color: "#FFFFFF", fontSize: 16, marginTop: 3 }}>
         {value}
       </div>
-    </div>
-  );
-}
-
-function ReportHeaderRow() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        padding: "12px 20px",
-        background: COLORS.surf2,
-        borderBottom: `1px solid ${COLORS.border}`,
-        ...TYPE_SCALE.caption,
-        color: COLORS.muted2,
-        textTransform: "uppercase",
-      }}
-    >
-      <div style={{ flex: 2 }}>Industry</div>
-      <div style={{ flex: 1, textAlign: "right" }}>Modules completed</div>
-      <div style={{ flex: 2, textAlign: "right" }}>Readiness</div>
-    </div>
-  );
-}
-
-function ReportRow({ row, isLast }) {
-  const pctLabel = `${Math.round(row.readiness * 100)}%`;
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "16px 20px",
-        borderBottom: isLast ? "none" : `1px solid ${COLORS.border}`,
-      }}
-    >
-      <div style={{ flex: 2, ...TYPE_SCALE.cardTitle }}>{row.industry.name}</div>
-      <div style={{ flex: 1, textAlign: "right", ...TYPE_SCALE.body, color: COLORS.muted }}>
-        {row.completed} / {row.total}
-      </div>
-      <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
-        <div
-          style={{
-            width: 140,
-            height: 6,
-            borderRadius: 999,
-            background: COLORS.border,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: pctLabel,
-              background: row.readiness >= 1 ? COLORS.green : COLORS.acc,
-              borderRadius: 999,
-            }}
-          />
-        </div>
-        <span style={{ ...TYPE_SCALE.caption, color: COLORS.muted2, width: 36, textAlign: "right" }}>
-          {pctLabel}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function CapabilityBreakdown({ industry, completedModuleIds }) {
-  const modules = getModulesForIndustry(industry.id);
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-        gap: 16,
-      }}
-    >
-      {industry.capabilities.map((cap) => {
-        const capModules = modules.filter((m) => m.capabilityId === cap.id);
-        const capCompleted = capModules.filter((m) => completedModuleIds.includes(m.id));
-        const pct = capModules.length ? capCompleted.length / capModules.length : 0;
-
-        return (
-          <div
-            key={cap.id}
-            style={{
-              background: COLORS.surf,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: RADIUS.md,
-              boxShadow: SHADOW.sm,
-              padding: 16,
-            }}
-          >
-            <div style={{ ...TYPE_SCALE.cardTitle, fontSize: 14 }}>{cap.name}</div>
-            <div
-              style={{
-                ...TYPE_SCALE.display,
-                fontSize: 32,
-                marginTop: 8,
-                color: pct >= 1 ? COLORS.green : COLORS.acc,
-              }}
-            >
-              {Math.round(pct * 100)}%
-            </div>
-            <div style={{ ...TYPE_SCALE.caption, color: COLORS.muted2, marginTop: 4 }}>
-              {capCompleted.length}/{capModules.length || 0} modules
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
