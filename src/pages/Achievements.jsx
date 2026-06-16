@@ -1,9 +1,12 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { COLORS, TYPE_SCALE, SHADOW, RADIUS } from "../theme/tokens.js";
 import { useAppStore, BADGES, MISSIONS } from "../store/AppStore.jsx";
+import { CAP_DIMS, ROLE_DIMS } from "../data/assessment.js";
 
 export default function Achievements() {
-  const { xp, progress, perfectQuizzes, streak } = useAppStore();
+  const { auth, xp, progress, perfectQuizzes, streak } = useAppStore();
+  const role = auth?.role || "learner";
 
   // BADGES: ok(progress, perfectQuizzes)
   const earnedBadges = BADGES.filter((b) => b.ok(progress, perfectQuizzes));
@@ -193,6 +196,91 @@ export default function Achievements() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Skill Passport — CAP_DIMS capability bars */}
+      <SkillPassport xp={xp} role={role} />
+    </div>
+  );
+}
+
+// ─── Skill Passport ───────────────────────────────────────────────────────────
+// Estimates capability level from XP using a simple tiered heuristic
+function estimateDimScore(dim, xp, role) {
+  const roleDimIds = ROLE_DIMS[role] || ROLE_DIMS.learner;
+  if (!roleDimIds.includes(dim.id)) return null;
+
+  // Map XP to a rough 0–100 score per dimension
+  // Earlier dimensions (lower id number) are lower-hanging fruit at lower XP
+  const dimIndex = parseInt(dim.id.replace("d", ""), 10) - 1;
+  const base = Math.max(0, xp - dimIndex * 80);
+  const raw = Math.min(100, Math.round(base / 10));
+  return raw;
+}
+
+function SkillPassport({ xp, role }) {
+  const roleDimIds = ROLE_DIMS[role] || ROLE_DIMS.learner;
+  const dims = CAP_DIMS.filter((d) => roleDimIds.includes(d.id));
+
+  return (
+    <div style={{ marginTop: 48 }}>
+      <h2 style={{ ...TYPE_SCALE.sectionTitle, marginBottom: 6 }}>Skill Passport</h2>
+      <p style={{ fontSize: 13, color: COLORS.muted, marginBottom: 20 }}>
+        Estimated capability levels based on your learning progress.{" "}
+        <Link to="/assess" style={{ color: COLORS.acc, fontWeight: 600 }}>
+          Take the full Readiness Assessment →
+        </Link>
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        {dims.map((d) => {
+          const score = estimateDimScore(d, xp, role);
+          if (score === null) return null;
+          const label =
+            score < 25 ? "Aware" :
+            score < 50 ? "Developing" :
+            score < 75 ? "Proficient" :
+            "Advanced";
+          const labelColor =
+            score < 25 ? COLORS.muted2 :
+            score < 50 ? COLORS.gold :
+            score < 75 ? COLORS.acc :
+            COLORS.green;
+
+          return (
+            <div
+              key={d.id}
+              style={{
+                background: COLORS.surf,
+                border: `1px solid ${COLORS.border}`,
+                borderLeft: `3px solid ${d.color}`,
+                borderRadius: RADIUS.md,
+                padding: "14px 16px",
+                boxShadow: SHADOW.sm,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: COLORS.text }}>{d.name}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: labelColor }}>{label}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: COLORS.border, overflow: "hidden", marginBottom: 6 }}>
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${score}%`,
+                    background: d.color,
+                    borderRadius: 999,
+                    transition: "width 600ms ease",
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, color: COLORS.muted2 }}>{d.skills.slice(0, 2).join(" · ")}</span>
+                <span style={{ fontSize: 11, color: COLORS.muted2, fontWeight: 600 }}>{score}%</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
