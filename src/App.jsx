@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard.jsx";
 import ReportsExco from "./pages/ReportsExco.jsx";
 import ReadinessAssessment from "./pages/ReadinessAssessment.jsx";
 import Missions from "./pages/Missions.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import { useAppStore } from "./store/AppStore.jsx";
 import { COLORS, FONT_FAMILY_BODY } from "./theme/tokens.js";
 
@@ -65,6 +66,11 @@ export default function App() {
         <Toast />
       </div>
     );
+  }
+
+  // Admin (facilitator) role → dedicated Enterprise Admin Portal
+  if (auth.role === "facilitator") {
+    return <AdminLayout />;
   }
 
   return <ProtectedLayout />;
