@@ -7,12 +7,11 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Learning from "./pages/Learning.jsx";
 import ModuleReader from "./pages/ModuleReader.jsx";
 import PromptLab from "./pages/PromptLab.jsx";
-import Achievements from "./pages/Achievements.jsx";
 import UseCaseLibrary from "./pages/UseCaseLibrary.jsx";
-import Leaderboard from "./pages/Leaderboard.jsx";
 import ReportsExco from "./pages/ReportsExco.jsx";
 import ReadinessAssessment from "./pages/ReadinessAssessment.jsx";
 import Missions from "./pages/Missions.jsx";
+import MyProgress from "./pages/MyProgress.jsx";
 import AdminLayout from "./pages/admin/AdminLayout.jsx";
 import { useAppStore } from "./store/AppStore.jsx";
 import { COLORS, FONT_FAMILY_BODY } from "./theme/tokens.js";
@@ -35,12 +34,14 @@ function ProtectedLayout() {
           <Route path="/learning" element={<Learning />} />
           <Route path="/module/:tierId/:moduleId" element={<ModuleReader />} />
           <Route path="/prompt-lab" element={<PromptLab />} />
-          <Route path="/achievements" element={<Achievements />} />
           <Route path="/use-cases" element={<UseCaseLibrary />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/reports" element={<ReportsExco />} />
           <Route path="/assess" element={<ReadinessAssessment />} />
           <Route path="/missions" element={<Missions />} />
+          <Route path="/progress" element={<MyProgress />} />
+          {/* Legacy redirects — old bookmarks land on My Progress */}
+          <Route path="/achievements" element={<Navigate to="/progress" replace />} />
+          <Route path="/leaderboard" element={<Navigate to="/progress" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

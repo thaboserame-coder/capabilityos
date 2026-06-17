@@ -4,8 +4,304 @@ import { COLORS, TYPE_SCALE, SHADOW, RADIUS, FONT_FAMILY_DISPLAY } from "../../t
 import { useAppStore } from "../../store/AppStore.jsx";
 import {
   ORG, BUSINESS_UNITS, INTERVENTIONS, RISKS, AUDIT_EVENTS, SYSTEM_METRICS,
+  ORG_CAPABILITY_SCORES, DEMO_LEARNERS,
   getRiskColor, getRiskLabel,
 } from "../../data/enterpriseData.js";
+
+// ─── Capability Radar ─────────────────────────────────────────────────────────
+function CapabilityRadar({ scores }) {
+  const N = scores.length;
+  const CX = 180, CY = 180, R = 130;
+  const angleStep = (2 * Math.PI) / N;
+
+  function polar(i, radius) {
+    const angle = i * angleStep - Math.PI / 2;
+    return {
+      x: CX + radius * Math.cos(angle),
+      y: CY + radius * Math.sin(angle),
+    };
+  }
+
+  function toPath(values) {
+    return values
+      .map((v, i) => {
+        const pt = polar(i, v);
+        return `${i === 0 ? "M" : "L"} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+      })
+      .join(" ") + " Z";
+  }
+
+  const orgPath = toPath(scores.map((s) => (s.orgScore / 100) * R));
+  const benchPath = toPath(scores.map((s) => (s.benchmark / 100) * R));
+
+  return (
+    <div
+      style={{
+        background: COLORS.surf, border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.lg, boxShadow: SHADOW.sm, padding: "24px",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <h2 style={{ ...TYPE_SCALE.sectionTitle }}>Capability Radar</h2>
+        <Link to="/admin/intelligence" style={{ fontSize: 12, color: COLORS.acc, fontWeight: 600, textDecoration: "none" }}>
+          Details →
+        </Link>
+      </div>
+      <p style={{ fontSize: 12, color: COLORS.muted, marginBottom: 16 }}>Org score vs sector benchmark</p>
+
+      <svg viewBox="0 0 360 360" style={{ width: "100%", height: "auto", display: "block" }}>
+        {/* Grid rings */}
+        {[25, 50, 75, 100].map((pct) => (
+          <polygon
+            key={pct}
+            points={scores.map((_, i) => {
+              const pt = polar(i, (pct / 100) * R);
+              return `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+            }).join(" ")}
+            fill="none"
+            stroke={COLORS.border}
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* Axis lines */}
+        {scores.map((_, i) => {
+          const pt = polar(i, R);
+          return <line key={i} x1={CX} y1={CY} x2={pt.x.toFixed(1)} y2={pt.y.toFixed(1)} stroke={COLORS.border} strokeWidth="1" />;
+        })}
+
+        {/* Benchmark fill */}
+        <path d={benchPath} fill={COLORS.muted2 + "20"} stroke={COLORS.muted2} strokeWidth="1.5" strokeDasharray="4,3" />
+
+        {/* Org fill */}
+        <path d={orgPath} fill={COLORS.acc + "25"} stroke={COLORS.acc} strokeWidth="2" />
+
+        {/* Data points */}
+        {scores.map((s, i) => {
+          const pt = polar(i, (s.orgScore / 100) * R);
+          return <circle key={i} cx={pt.x.toFixed(1)} cy={pt.y.toFixed(1)} r="4" fill={COLORS.acc} />;
+        })}
+
+        {/* Labels */}
+        {scores.map((s, i) => {
+          const pt = polar(i, R + 22);
+          const isLeft = pt.x < CX - 10;
+          return (
+            <text
+              key={i}
+              x={pt.x.toFixed(1)}
+              y={pt.y.toFixed(1)}
+              textAnchor={isLeft ? "end" : pt.x > CX + 10 ? "start" : "middle"}
+              dominantBaseline="middle"
+              fontSize="9"
+              fontWeight="600"
+              fill={COLORS.muted}
+            >
+              {s.name.length > 12 ? s.name.slice(0, 12) + "…" : s.name}
+            </text>
+          );
+        })}
+
+        {/* Score labels */}
+        {scores.map((s, i) => {
+          const pt = polar(i, (s.orgScore / 100) * R);
+          if (Math.abs(s.gap) > 8) {
+            return (
+              <text
+                key={i}
+                x={(pt.x - 1).toFixed(1)}
+                y={(pt.y - 8).toFixed(1)}
+                textAnchor="middle"
+                fontSize="8"
+                fontWeight="800"
+                fill={s.gap < -12 ? COLORS.danger : COLORS.acc}
+              >
+                {s.orgScore}
+              </text>
+            );
+          }
+          return null;
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 16, height: 3, background: COLORS.acc, borderRadius: 2 }} />
+          <span style={{ fontSize: 11, color: COLORS.muted }}>Organisation</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 16, height: 3, background: COLORS.muted2, borderRadius: 2, borderTop: "1px dashed" }} />
+          <span style={{ fontSize: 11, color: COLORS.muted }}>Benchmark</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Learner Attention Table ──────────────────────────────────────────────────
+function LearnerAttentionTable({ learners }) {
+  // At-risk: low readiness OR inactive more than 3 days OR very low XP
+  const atRisk = learners.filter(
+    (l) => l.readiness < 40 || l.lastActive === "1 week" || l.lastActive === "2 weeks" || (l.xp < 200 && l.status !== "completed")
+  ).slice(0, 8);
+
+  const getBUName = (buId) => {
+    const map = {
+      bu_claims: "Claims", bu_ops: "Operations", bu_finance: "Finance",
+      bu_uw: "Underwriting", bu_invest: "Investments", bu_hr: "HR",
+      bu_tech: "Technology", bu_legal: "Legal",
+    };
+    return map[buId] || buId;
+  };
+
+  return (
+    <div
+      style={{
+        background: COLORS.surf, border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.lg, boxShadow: SHADOW.sm, overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          padding: "16px 20px",
+          borderBottom: `1px solid ${COLORS.border}`,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Learners Needing Attention</div>
+          <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+            {atRisk.length} learners below threshold or inactive
+          </div>
+        </div>
+        <Link to="/admin/learners" style={{ fontSize: 11, color: COLORS.acc, textDecoration: "none", fontWeight: 600 }}>
+          All learners →
+        </Link>
+      </div>
+
+      {atRisk.length === 0 ? (
+        <div style={{ padding: "32px 20px", textAlign: "center", color: COLORS.muted2 }}>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>✓</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.green }}>All learners on track</div>
+        </div>
+      ) : (
+        <div>
+          {atRisk.map((l, i) => {
+            const isInactive = l.lastActive === "1 week" || l.lastActive === "2 weeks";
+            const isLowScore = l.readiness < 30;
+            const flagColor = isLowScore ? COLORS.danger : isInactive ? "#E8743B" : COLORS.gold;
+            const flagLabel = isLowScore ? "Low score" : isInactive ? "Inactive" : "Needs nudge";
+
+            return (
+              <div
+                key={l.id}
+                style={{
+                  padding: "12px 20px",
+                  borderBottom: i < atRisk.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                    background: COLORS.acc + "15",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, fontWeight: 700, color: COLORS.acc,
+                  }}
+                >
+                  {l.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: COLORS.text }}>{l.name}</div>
+                  <div style={{ fontSize: 11, color: COLORS.muted2, marginTop: 1 }}>
+                    {getBUName(l.bu)} · Last active: {l.lastActive}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: l.readiness < 30 ? COLORS.danger : l.readiness < 50 ? "#E8743B" : COLORS.gold }}>
+                    {l.readiness}%
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10, fontWeight: 700, color: flagColor,
+                      background: flagColor + "14", border: `1px solid ${flagColor}30`,
+                      borderRadius: 999, padding: "1px 7px", marginTop: 3,
+                      display: "inline-block",
+                    }}
+                  >
+                    {flagLabel}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Platform Health Grid ─────────────────────────────────────────────────────
+function PlatformHealthGrid({ metrics }) {
+  const items = [
+    { label: "Platform Uptime",    value: `${metrics.uptime}%`,      status: metrics.uptime > 99.5 ? "healthy" : metrics.uptime > 98 ? "warning" : "critical" },
+    { label: "API Latency",        value: `${metrics.apiLatency}ms`,  status: metrics.apiLatency < 200 ? "healthy" : metrics.apiLatency < 500 ? "warning" : "critical" },
+    { label: "DB Query Time",      value: `${metrics.dbQueryTime}ms`, status: metrics.dbQueryTime < 100 ? "healthy" : metrics.dbQueryTime < 300 ? "warning" : "critical" },
+    { label: "Active Sessions",    value: metrics.activeSessions,     status: "healthy" },
+    { label: "Open Tickets",       value: metrics.openTickets,        status: metrics.openTickets < 5 ? "healthy" : metrics.openTickets < 15 ? "warning" : "critical" },
+    { label: "Critical Alerts",    value: metrics.criticalAlerts,     status: metrics.criticalAlerts === 0 ? "healthy" : "critical" },
+    { label: "Storage Used",       value: `${metrics.storageUsed}%`,  status: metrics.storageUsed < 70 ? "healthy" : metrics.storageUsed < 85 ? "warning" : "critical" },
+    { label: "Sync Jobs",          value: metrics.syncJobsQueued,     status: metrics.syncJobsQueued < 3 ? "healthy" : "warning" },
+  ];
+
+  const DOT = {
+    healthy:  { color: COLORS.green,  icon: "●" },
+    warning:  { color: COLORS.gold,   icon: "◐" },
+    critical: { color: COLORS.danger, icon: "○" },
+  };
+
+  return (
+    <div
+      style={{
+        background: COLORS.surf, border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.lg, boxShadow: SHADOW.sm, padding: "20px 24px",
+        marginTop: 24,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ ...TYPE_SCALE.cardTitle }}>Platform Health</div>
+        <Link to="/admin/system-health" style={{ fontSize: 12, color: COLORS.acc, fontWeight: 600, textDecoration: "none" }}>
+          System Health Monitor →
+        </Link>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+        {items.map((item) => {
+          const dot = DOT[item.status];
+          return (
+            <div
+              key={item.label}
+              style={{
+                background: item.status === "critical" ? COLORS.danger + "06" : COLORS.bg,
+                border: `1px solid ${item.status === "critical" ? COLORS.danger + "25" : COLORS.border}`,
+                borderRadius: RADIUS.md, padding: "12px 14px",
+                display: "flex", alignItems: "center", gap: 10,
+              }}
+            >
+              <span style={{ fontSize: 12, color: dot.color, flexShrink: 0 }}>{dot.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: COLORS.muted2, fontWeight: 600 }}>{item.label}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: item.status === "critical" ? COLORS.danger : COLORS.text, marginTop: 2 }}>
+                  {item.value}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function Stat({ label, value, sub, color, badge }) {
   return (
@@ -442,6 +738,15 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Capability Radar + Learner Attention */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 32, alignItems: "start" }}>
+          <CapabilityRadar scores={ORG_CAPABILITY_SCORES} />
+          <LearnerAttentionTable learners={DEMO_LEARNERS} />
+        </div>
+
+        {/* Platform Health Grid */}
+        <PlatformHealthGrid metrics={SYSTEM_METRICS} />
 
         {/* Quick action links */}
         <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { COLORS, TYPE_SCALE, SHADOW, RADIUS, FONT_FAMILY_DISPLAY } from "../theme/tokens.js";
 import { useAppStore, BADGES } from "../store/AppStore.jsx";
 import { getLevelForXP, getLevelProgress, getNextLevel } from "../data/levels.js";
@@ -61,6 +61,12 @@ export default function Dashboard() {
       <p style={{ ...TYPE_SCALE.body, color: COLORS.muted, marginTop: 10, maxWidth: 580 }}>
         {getWelcomeText(auth?.role)}
       </p>
+
+      {/* Context Strip */}
+      <ContextStrip auth={auth} level={level} xp={xp} />
+
+      {/* AI Insight Callout */}
+      <AIInsightCallout role={auth?.role} xp={xp} doneMods={doneMods} totalMods={totalMods} />
 
       {/* Stat cards */}
       <div style={{ display: "flex", gap: 14, marginTop: 28, flexWrap: "wrap" }}>
@@ -203,6 +209,142 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// ─── Context Strip ────────────────────────────────────────────────────────────
+// Compact horizontal strip showing the learner's profile context
+const ROLE_LABELS = {
+  executive: "Executive Leader",
+  functional: "Executive Leadership",
+  manager: "Senior Management",
+  learner: "Professional",
+  emerging: "Emerging Professional",
+  facilitator: "Facilitator",
+};
+
+const FN_LABELS = {
+  finance: "Finance", hr: "Human Resources", marketing: "Marketing",
+  operations: "Operations", technology: "Technology", legal: "Legal",
+  strategy: "Strategy", risk: "Risk & Compliance", other: "General",
+};
+
+const MATURITY_LEVELS = [
+  { max: 200,  label: "AI Aware",       color: COLORS.muted2 },
+  { max: 600,  label: "AI Exploring",   color: COLORS.gold },
+  { max: 1200, label: "AI Developing",  color: COLORS.acc },
+  { max: 2500, label: "AI Proficient",  color: COLORS.purple },
+  { max: Infinity, label: "AI Advanced", color: COLORS.green },
+];
+
+function getMaturity(xp) {
+  return MATURITY_LEVELS.find((m) => xp < m.max) || MATURITY_LEVELS[MATURITY_LEVELS.length - 1];
+}
+
+function ContextStrip({ auth, level, xp }) {
+  const maturity = getMaturity(xp);
+  const chips = [
+    { icon: "👤", label: ROLE_LABELS[auth?.role] || auth?.role || "Learner" },
+    { icon: "🏢", label: "Momentum Group" },
+    auth?.fn && { icon: "📍", label: FN_LABELS[auth.fn] || auth.fn },
+    auth?.industry && { icon: "🏭", label: auth.industry },
+    { icon: "🎯", label: maturity.label, accent: maturity.color },
+  ].filter(Boolean);
+
+  return (
+    <div
+      style={{
+        display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16, marginBottom: 4,
+      }}
+    >
+      {chips.map((chip, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: COLORS.surf,
+            border: `1px solid ${chip.accent ? chip.accent + "40" : COLORS.border}`,
+            borderRadius: 999,
+            padding: "5px 12px",
+            fontSize: 12, fontWeight: 600,
+            color: chip.accent || COLORS.muted,
+            boxShadow: SHADOW.sm,
+          }}
+        >
+          <span style={{ fontSize: 11 }}>{chip.icon}</span>
+          {chip.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── AI Insight Callout ───────────────────────────────────────────────────────
+const INSIGHTS = {
+  executive: [
+    "Your organisation's AI governance readiness is below the financial services sector benchmark. Recommend scheduling a board-level AI risk review this quarter.",
+    "Only 34% of executive cohort members have completed the AI Strategy module. Completion correlates with 2.4× higher team adoption scores.",
+    "Three of your business units show AI capability gaps in Data Literacy — the highest-ROI dimension to address first.",
+  ],
+  functional: [
+    "Completing the AI Business Case module increases your ability to unlock functional AI budgets by an average of 67%, per cohort data.",
+    "Your team's AI tool adoption is in the top quartile — consider completing the AI Governance module to maintain compliance leadership.",
+    "Peers in your role category who completed the Prompting module report saving 4–6 hours per week on report drafting.",
+  ],
+  learner: [
+    "Learners who complete 3 modules in their first week are 5× more likely to finish their full tier. You're on track.",
+    "Your capability score in Data Literacy is lower than your other dimensions — one module away from moving to 'Proficient'.",
+    "The Prompt Engineering module is the highest-rated in your cohort this month. 93% found it immediately applicable.",
+  ],
+};
+
+function AIInsightCallout({ role, xp, doneMods, totalMods }) {
+  const pool = INSIGHTS[role] || INSIGHTS.learner;
+  const idx = Math.floor(new Date().getDate() % pool.length);
+  const insight = pool[idx];
+
+  if (xp < 50) return null; // don't show before any activity
+
+  return (
+    <div
+      style={{
+        display: "flex", gap: 14, alignItems: "flex-start",
+        background: COLORS.acc + "08",
+        border: `1px solid ${COLORS.acc}25`,
+        borderLeft: `4px solid ${COLORS.acc}`,
+        borderRadius: RADIUS.md,
+        padding: "14px 18px",
+        marginTop: 16, marginBottom: 4,
+        maxWidth: 760,
+      }}
+    >
+      <div
+        style={{
+          width: 32, height: 32, borderRadius: RADIUS.sm, flexShrink: 0,
+          background: COLORS.acc + "18",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 16,
+        }}
+      >
+        💡
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.acc, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>
+          AI Insight
+        </div>
+        <p style={{ fontSize: 13, color: COLORS.text, lineHeight: 1.6, margin: 0 }}>{insight}</p>
+      </div>
+      <Link
+        to="/assess"
+        style={{
+          flexShrink: 0, fontSize: 12, fontWeight: 600, color: COLORS.acc,
+          textDecoration: "none", alignSelf: "center",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Check readiness →
+      </Link>
     </div>
   );
 }

@@ -5,15 +5,14 @@ import { useAppStore } from "../store/AppStore.jsx";
 import { getLevelForXP, getLevelProgress } from "../data/levels.js";
 
 const ALL_NAV = [
-  { to: "/",            label: "Dashboard",    icon: "⊞", roles: null },
-  { to: "/learning",    label: "Learning",     icon: "◎", roles: null },
-  { to: "/missions",    label: "Missions",     icon: "⚡", roles: null },
-  { to: "/prompt-lab",  label: "Prompt Lab",   icon: "⌘", roles: null },
-  { to: "/use-cases",   label: "Use Cases",    icon: "◈", roles: null },
-  { to: "/achievements",label: "Achievements", icon: "✦", roles: null },
-  { to: "/assess",      label: "Readiness",    icon: "◉", roles: null },
-  { to: "/leaderboard", label: "Leaderboard",  icon: "▲", roles: null },
-  { to: "/reports",     label: "Reports",      icon: "⊟", roles: ["executive", "functional", "facilitator"] },
+  { to: "/",            label: "Home",             icon: "⊞", roles: null },
+  { to: "/learning",    label: "My Learning",      icon: "◎", roles: null },
+  { to: "/assess",      label: "Capability Check", icon: "◉", roles: null },
+  { to: "/missions",    label: "My Challenges",    icon: "⚡", roles: null },
+  { to: "/use-cases",   label: "AI at Work",       icon: "◈", roles: null },
+  { to: "/prompt-lab",  label: "AI Toolkit",       icon: "⌘", roles: null },
+  { to: "/progress",    label: "My Progress",      icon: "▲", roles: null },
+  { to: "/reports",     label: "Reports",          icon: "⊟", roles: ["executive", "functional", "facilitator"] },
 ];
 
 export default function LearnerNav() {

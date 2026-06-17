@@ -394,15 +394,15 @@ export default function ReadinessAssessment() {
 
           <button
             onClick={handleNext}
-            disabled={!selected}
+            disabled={selected === null}
             style={{
               marginTop: 22,
               padding: "11px 28px",
-              background: selected ? COLORS.acc : COLORS.border,
-              color: selected ? "#fff" : COLORS.muted2,
+              background: selected !== null ? COLORS.acc : COLORS.border,
+              color: selected !== null ? "#fff" : COLORS.muted2,
               border: "none",
               borderRadius: RADIUS.md,
-              cursor: selected ? "pointer" : "not-allowed",
+              cursor: selected !== null ? "pointer" : "not-allowed",
               fontFamily: "inherit",
               fontWeight: 700,
               fontSize: 14,

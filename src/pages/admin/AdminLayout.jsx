@@ -16,6 +16,7 @@ import SystemHealth from "./SystemHealth.jsx";
 import AuditLogs from "./AuditLogs.jsx";
 import AdminModuleNotes from "./AdminModuleNotes.jsx";
 import AdminIntegrations from "./AdminIntegrations.jsx";
+import AdminOrgSetup from "./AdminOrgSetup.jsx";
 
 const NAV_SECTIONS = [
   {
@@ -47,8 +48,9 @@ const NAV_SECTIONS = [
   {
     label: "Platform",
     items: [
-      { to: "/admin/module-notes",  label: "Module Notes",  icon: "◫" },
-      { to: "/admin/integrations",  label: "LXP Setup",     icon: "⊛" },
+      { to: "/admin/module-notes",  label: "Module Notes",       icon: "◫" },
+      { to: "/admin/integrations",  label: "LXP Setup",          icon: "⊛" },
+      { to: "/admin/org-setup",     label: "Organisation Setup",  icon: "⬡" },
     ],
   },
 ];
@@ -252,6 +254,7 @@ export default function AdminLayout() {
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/module-notes" element={<AdminModuleNotes />} />
           <Route path="/admin/integrations" element={<AdminIntegrations />} />
+          <Route path="/admin/org-setup" element={<AdminOrgSetup />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </main>
