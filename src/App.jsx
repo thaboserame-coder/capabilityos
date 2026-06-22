@@ -5,7 +5,27 @@ import PT from "prop-types";
 import Badge from "./ui/Badge.jsx";
 import ProgressBar from "./ui/ProgressBar.jsx";
 import Toast from "./ui/Toast.jsx";
-import { getFallbackQuiz } from "./data/fallbackQuiz.js";
+
+// Local, dependency-free fallback bank for the Daily Challenge widget — used
+// whenever the same-origin /api/quiz proxy is unavailable or unconfigured,
+// so the challenge always produces a question with no network dependency.
+const DAILY_FALLBACK_Q = [
+  {q:"Which of the following best describes generative AI?",
+   options:["A system that follows fixed, predefined rules with no learning","A system that creates new content by predicting plausible continuations based on patterns in training data","A database query tool for structured records only","A type of antivirus software"],
+   correct:1,explanation:"Generative AI produces new text, code, or analysis by predicting the most statistically plausible continuation of a prompt, based on patterns learned during training."},
+  {q:"What is 'hallucination' in the context of generative AI?",
+   options:["A hardware malfunction in the server running the model","When the AI refuses to answer a question","Confident, fluent, well-structured output that is factually incorrect","A visual glitch in the user interface"],
+   correct:2,explanation:"Hallucination describes output that looks accurate and authoritative but is not grounded in fact — a structural feature of how generative models work, not a rare bug."},
+  {q:"Before relying on an AI-generated factual claim in a professional context, what should you do?",
+   options:["Use it immediately — AI outputs are generally reliable for facts","Independently verify it against an authoritative source when accuracy matters","Ask a different AI tool to confirm, and stop there","Reformat it so it looks more official"],
+   correct:1,explanation:"Verification against an authoritative source is the professional standard for any AI-generated factual claim — statistics, names, dates, regulatory details, and similar."},
+  {q:"What is the most common organisational (non-technical) reason AI initiatives fail?",
+   options:["The AI model is too accurate","Unclear business case, weak accountability, or change management treated as a one-off announcement","Too much executive sponsorship","Excessive testing before launch"],
+   correct:1,explanation:"Technical failure is relatively rare. The more common pattern is an unclear outcome definition or adoption never moving past compliance."},
+  {q:"What is the recommended relationship between AI and human review for professional deliverables?",
+   options:["AI replaces human review entirely once accurate enough","Human review replaces AI — AI should not be used for drafting","AI accelerates the draft; human expertise validates the output before it is relied upon","AI and human review should never be used on the same document"],
+   correct:2,explanation:"The consistent professional standard is: AI drafts, human verifies — particularly where outputs affect financial figures, people decisions, or regulatory content."},
+];
 
 // ─── Design tokens: Workday / Oracle Cloud quality ──────────────────────────
 const T = {
@@ -623,8 +643,8 @@ function DailyChallenge({progress,completedToday,onComplete,xp}){
       if(!picked)throw new Error("No questions returned");
       setQ({q:picked.q,opts:picked.options,correct:picked.correct,exp:picked.explanation});
     }catch(e){
-      const fb=getFallbackQuiz({moduleTitle:dm.title,count:1})[0];
-      if(fb)setQ({q:fb.q,opts:fb.options,correct:fb.correct,exp:fb.explanation});
+      const fb=DAILY_FALLBACK_Q[Math.floor(Math.random()*DAILY_FALLBACK_Q.length)];
+      setQ({q:fb.q,opts:fb.options,correct:fb.correct,exp:fb.explanation});
     }
     setLoading(false);
   }
